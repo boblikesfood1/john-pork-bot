@@ -1,0 +1,14 @@
+{
+  "name": "john-pork-bot",
+  "version": "1.0.0",
+  "description": "John Pork - lazy hilarious Slack agent for Big Money Moves Inc.",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@slack/bolt": "^3.19.0",
+    "dotenv": "^16.4.5"
+  }
+}
