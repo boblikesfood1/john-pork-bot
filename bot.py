@@ -1,4 +1,6 @@
-import os, random, tempfile
+import os
+import random
+import tempfile
 from pathlib import Path
 
 import requests
@@ -15,12 +17,25 @@ remaining = []
 
 def get_photo():
     global remaining
-    response = app.client.files_list(channel=PHOTO_CHANNEL_ID, count=1000)
+    files = []
+    cursor = None
+
+    while True:
+        params = {"channel": PHOTO_CHANNEL_ID, "count": 100}
+        if cursor:
+            params["cursor"] = cursor
+        response = app.client.files_list(**params)
+        files.extend(response.get("files", []))
+        cursor = (response.get("response_metadata") or {}).get("next_cursor")
+        if not cursor:
+            break
+
     files = [
-        file for file in response.get("files", [])
+        file for file in files
         if file.get("mimetype", "").startswith("image/")
         and not file.get("is_external")
     ]
+
     if not files:
         raise RuntimeError("No image files found in PHOTO_CHANNEL_ID")
 
