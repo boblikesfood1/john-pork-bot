@@ -12,12 +12,19 @@ remaining = []
 
 def get_photo():
     global remaining
-    r = app.client.files_list(channel=PHOTO_CHANNEL_ID, count=1000)
-    files = [f for f in r.get("files", []) if f.get("mimetype", "").startswith("image/") and not f.get("is_external")]
+    r = app.client.files_list(count=1000)
+    files = []
+    for f in r.get("files", []):
+        if not f.get("mimetype", "").startswith("image/"):
+            continue
+        if PHOTO_CHANNEL_ID in f.get("channels", []):
+            files.append(f)
+
     if not files:
-        raise RuntimeError("No image files found in PHOTO_CHANNEL_ID")
-    ids = {f["id"] for f in files}
-    remaining = [f for f in remaining if f["id"] in ids]
+        raise RuntimeError(f"No image files found in {PHOTO_CHANNEL_ID}")
+
+    valid_ids = {f["id"] for f in files}
+    remaining = [f for f in remaining if f["id"] in valid_ids]
     if not remaining:
         remaining = files[:]
     return remaining.pop(random.randrange(len(remaining)))
