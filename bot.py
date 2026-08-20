@@ -12,17 +12,23 @@ remaining = []
 
 def get_photo():
     global remaining
-    r = app.client.files_list(count=1000)
-    files = []
-    for f in r.get("files", []):
-        if not f.get("mimetype", "").startswith("image/"):
-            continue
-        channel_ids = set(f.get("channels", [])) | set(f.get("groups", []))
-        if PHOTO_CHANNEL_ID in channel_ids:
-            files.append(f)
+    result = app.client.conversations_history(
+        channel=PHOTO_CHANNEL_ID,
+        limit=100,
+    )
 
+    files = []
+    for message in result.get("messages", []):
+        for f in message.get("files", []):
+            if f.get("mimetype", "").startswith("image/"):
+                files.append(f)
+
+    # Remove duplicate file IDs while preserving order.
+    files = list({f["id"]: f for f in files}.values())
     if not files:
-        raise RuntimeError(f"No image files found in {PHOTO_CHANNEL_ID}")
+        raise RuntimeError(
+            f"No image attachments found in {PHOTO_CHANNEL_ID}"
+        )
 
     valid_ids = {f["id"] for f in files}
     remaining = [f for f in remaining if f["id"] in valid_ids]
