@@ -17,7 +17,8 @@ def get_photo():
     for f in r.get("files", []):
         if not f.get("mimetype", "").startswith("image/"):
             continue
-        if PHOTO_CHANNEL_ID in f.get("channels", []):
+       channel_ids = set(f.get("channels", [])) | set(f.get("groups", []))
+        if PHOTO_CHANNEL_ID in channel_ids:
             files.append(f)
 
     if not files:
