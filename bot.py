@@ -17,9 +17,18 @@ def get_photo():
     for f in r.get("files", []):
         if not f.get("mimetype", "").startswith("image/"):
             continue
-       channel_ids = set(f.get("channels", [])) | set(f.get("groups", []))
+        channel_ids = set(f.get("channels", [])) | set(f.get("groups", []))
         if PHOTO_CHANNEL_ID in channel_ids:
             files.append(f)
+
+    if not files:
+        raise RuntimeError(f"No image files found in {PHOTO_CHANNEL_ID}")
+
+    valid_ids = {f["id"] for f in files}
+    remaining = [f for f in remaining if f["id"] in valid_ids]
+    if not remaining:
+        remaining = files[:]
+    return remaining.pop(random.randrange(len(remaining)))
 
     if not files:
         raise RuntimeError(f"No image files found in {PHOTO_CHANNEL_ID}")
