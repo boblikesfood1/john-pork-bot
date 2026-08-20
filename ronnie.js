@@ -911,49 +911,289 @@ const extraBanks = {
 
 
 // Add the extra banks.
-for (const [name, bank] of Object.entries(extraBanks)) {
-  if (!responseBanks[name]) {
-    responseBanks[name] = [];
-  }
+// ============================================================
+// JOHN PORK: PERSONALITY / MEMORY / MOOD SYSTEM
+// No AI. No external model. Just local JavaScript.
+// ============================================================
 
-  responseBanks[name].push(...bank);
+let johnPorkMood = "normal";
+let johnPorkAnger = 0;
+let johnPorkMemory = [];
+let johnPorkLastActivity = Date.now();
+
+const JOHN_PORK_MEMORY_LIMIT = 25;
+
+const johnPorkMoodResponses = {
+  normal: [
+    "I'm here. Unfortunately.",
+    "Yeah?",
+    "What now?",
+    "I'm listening. Against my better judgment.",
+    "Go on."
+  ],
+
+  annoyed: [
+    "I'm already annoyed and you haven't even finished typing.",
+    "Fantastic. Exactly what I needed.",
+    "Sure. Because apparently we're doing this now.",
+    "I'm trying very hard not to comment on this.",
+    "You people are exhausting."
+  ],
+
+  pissed: [
+    "Oh, we're doing THIS today?",
+    "I am officially out of patience.",
+    "I'm going to need everyone to stop making my job harder.",
+    "This is fucking ridiculous.",
+    "I have several complaints and absolutely no HR department.",
+    "I'm one message away from becoming a problem."
+  ],
+
+  chaotic: [
+    "OH FUCKING EXCELLENT.",
+    "Finally. Some entertainment.",
+    "Now THIS is the kind of terrible decision I can support.",
+    "We're completely off the rails. I love it.",
+    "Nobody fix this. I want to see what happens."
+  ],
+
+  tired: [
+    "I don't have the emotional bandwidth for this.",
+    "Can we fuck around with this tomorrow?",
+    "I'm tired and therefore objectively correct.",
+    "It's too late for this shit.",
+    "My remaining brain cell has submitted a resignation letter."
+  ]
+};
+
+
+// ------------------------------------------------------------
+// MEMORY
+// ------------------------------------------------------------
+
+function rememberJohnPorkMessage(text) {
+  if (!text) return;
+
+  johnPorkMemory.push({
+    text: String(text).slice(0, 500),
+    time: Date.now()
+  });
+
+  if (johnPorkMemory.length > JOHN_PORK_MEMORY_LIMIT) {
+    johnPorkMemory.shift();
+  }
 }
 
 
-// Add the new situations to Ronnie's local decision-making.
-situations.push(
-  ["success", ["approved","approved it","green light","signed","finished","completed","done","booked","landed","good news","works"], 9],
-  ["question", ["?","how do","what is","what's","why","when","where","who","can we","should we"], 5],
-  ["confusion", ["confused","don't understand","doesn't make sense","what the hell","what is happening","what happened","confusing"], 8],
-  ["tired", ["tired","exhausted","sleepy","no sleep","coffee","caffeine","long day","burned out","sleep"], 7]
-);
+function getJohnPorkRecentMemory() {
+  return johnPorkMemory
+    .slice(-10)
+    .map(x => x.text)
+    .join(" ");
+}
 
 
-// Extra keyword behavior.
-// These make Ronnie more likely to respond when somebody is
-// directly talking about him or saying something interesting.
-const originalShouldRonnieReply = shouldRonnieReply;
+// ------------------------------------------------------------
+// MOOD
+// ------------------------------------------------------------
 
-function ronnieInterestingMessage(text) {
-  const t = normalize(text);
+function updateJohnPorkMood(text) {
+  const t = normalize(text || "");
 
-  return (
-    /\bjohn pork\b/i.test(t) ||
-    /\b(pork|ronnie|bot)\b/i.test(t) ||
-    /\b(fuck|fucking|shit|bullshit|asshole|idiot|stupid|dumb)\b/i.test(t) ||
-    /\b(lmao|lol|haha|hilarious|wtf)\b/i.test(t)
+  if (
+    /\b(fuck|fucking|bullshit|idiot|stupid|dumb|hate|terrible|awful)\b/i.test(t)
+  ) {
+    johnPorkAnger += 12;
+  }
+
+  if (
+    /\b(lol|lmao|haha|funny|hilarious|joke)\b/i.test(t)
+  ) {
+    johnPorkAnger -= 5;
+  }
+
+  if (
+    /\b(thanks|thank you|great|awesome|perfect|love it|nice)\b/i.test(t)
+  ) {
+    johnPorkAnger -= 8;
+  }
+
+  johnPorkAnger = Math.max(0, Math.min(100, johnPorkAnger));
+
+  const hour = new Date().getHours();
+
+  if (hour >= 23 || hour < 6) {
+    johnPorkMood = "tired";
+  } else if (johnPorkAnger >= 70) {
+    johnPorkMood = "pissed";
+  } else if (johnPorkAnger >= 40) {
+    johnPorkMood = "annoyed";
+  } else if (Math.random() < 0.08) {
+    johnPorkMood = "chaotic";
+  } else {
+    johnPorkMood = "normal";
+  }
+
+  johnPorkLastActivity = Date.now();
+}
+
+
+// ------------------------------------------------------------
+// RANDOM PERSONALITY EVENTS
+// ------------------------------------------------------------
+
+const johnPorkEvents = [
+  "I have decided I'm taking a five-minute break. This is not negotiable.",
+  "Nobody asked, but I think we need better snacks.",
+  "I'm watching all of you.",
+  "I don't trust anyone who says 'quick question.'",
+  "I have no idea what's happening anymore.",
+  "I would like to formally complain about today.",
+  "Anyway, I'm hungry.",
+  "I'm choosing not to participate in this particular disaster.",
+  "Someone owes me an explanation.",
+  "I have decided that this is management's problem.",
+  "Everything is fine. This statement has not been reviewed by anyone.",
+  "I just remembered something from three days ago and I'm angry again.",
+  "Why is everyone still working?",
+  "I'm not saying anything because apparently I have learned restraint.",
+  "I have seen enough.",
+  "This company needs a documentary.",
+  "I'm beginning to think nobody here has a plan.",
+  "I'm going to pretend I didn't see that.",
+  "I have questions. Mostly about everyone's decision-making.",
+  "I'm going to need a minute."
+];
+
+function maybeJohnPorkEvent() {
+  // Roughly 2% of normal responses become a random personality event.
+  if (Math.random() > 0.02) return null;
+
+  return random(johnPorkEvents);
+}
+
+
+// ------------------------------------------------------------
+// TIME / DAY PERSONALITY
+// ------------------------------------------------------------
+
+function johnPorkTimeComment() {
+  const now = new Date();
+  const hour = now.getHours();
+  const day = now.getDay();
+
+  if (day === 1 && Math.random() < 0.08) {
+    return "It's Monday. I'm already disappointed.";
+  }
+
+  if (day === 5 && hour >= 15 && Math.random() < 0.10) {
+    return "It's Friday afternoon. Absolutely fucking not.";
+  }
+
+  if (hour >= 23 || hour < 6) {
+    return "Go to fucking bed.";
+  }
+
+  if (hour >= 12 && hour <= 13 && Math.random() < 0.06) {
+    return "I'm on lunch. This better be important.";
+  }
+
+  if (hour >= 17 && Math.random() < 0.06) {
+    return "Why are we still working?";
+  }
+
+  return null;
+}
+
+
+// ------------------------------------------------------------
+// EXTRA HUMAN-LIKE RESPONSE LOGIC
+// ------------------------------------------------------------
+
+function buildJohnPorkPersonalityReply(text, recentMessages = [], mentioned = false) {
+  rememberJohnPorkMessage(text);
+  updateJohnPorkMood(text);
+
+  const event = maybeJohnPorkEvent();
+
+  if (event && Math.random() < 0.35) {
+    return event;
+  }
+
+  const timeComment = johnPorkTimeComment();
+
+  let reply = originalBuildRonnieReply(
+    text,
+    recentMessages,
+    mentioned
+  );
+
+  // Occasionally prepend a mood reaction.
+  if (Math.random() < 0.12) {
+    const moodBank = johnPorkMoodResponses[johnPorkMood];
+
+    if (moodBank && moodBank.length) {
+      reply = `${random(moodBank)} ${reply}`;
+    }
+  }
+
+  // Occasionally add a time-based comment.
+  if (timeComment && Math.random() < 0.18) {
+    reply = `${reply} ${timeComment}`;
+  }
+
+  // Occasionally reference recent conversation.
+  if (
+    johnPorkMemory.length >= 4 &&
+    Math.random() < 0.04
+  ) {
+    reply += ` I haven't forgotten what you people were talking about five minutes ago, by the way.`;
+  }
+
+  return reply;
+}
+
+
+// ------------------------------------------------------------
+// SMARTER REPLY DECISION
+// ------------------------------------------------------------
+
+function johnPorkShouldReply(text, mentioned, recentMessages = []) {
+  rememberJohnPorkMessage(text);
+  updateJohnPorkMood(text);
+
+  const t = normalize(text || "");
+
+  // Always respond when directly summoned.
+  if (mentioned) return true;
+
+  // Always respond when someone directly addresses John Pork.
+  if (/\bjohn pork\b/i.test(t)) return true;
+
+  if (/\b(ronnie|pork bot|john)\b/i.test(t) && Math.random() < 0.85) {
+    return true;
+  }
+
+  // Angrier John Pork talks more.
+  if (johnPorkAnger >= 70 && Math.random() < 0.45) {
+    return true;
+  }
+
+  return originalShouldRonnieReply(
+    text,
+    mentioned,
+    recentMessages
   );
 }
 
 
-// Increase the fun without making Ronnie spam every message.
-const originalBuildRonnieReply = buildRonnieReply;
+// ------------------------------------------------------------
+// REPLACE THE EXPORTED FUNCTIONS
+// ------------------------------------------------------------
 
-
-// Give the daily pool a little more breathing room.
-const RONNIE_EXTRA_DAILY_LIMIT = 100;
-
-
-// Keep the existing public functions untouched.
-// The original functions already reference the mutable
-// responseBanks/situations objects above.
+module.exports = {
+  shouldRonnieReply: johnPorkShouldReply,
+  buildRonnieReply: buildJohnPorkPersonalityReply,
+  rememberResponse,
+  getDailyStats
+};
